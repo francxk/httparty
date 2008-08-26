@@ -18,7 +18,17 @@ module HTTParty
     base.extend ClassMethods
   end
 
-  AllowedFormats = {:xml => 'text/xml', :json => 'application/json'}
+  # this is the format known by the module
+  AllowedFormats = [:xml, :json]
+
+  # for each mime types give the format found in AllowedFormat (that can be parsed)
+  MimeTypes      = {
+    'application/xml' => :xml,
+    'application/atom+xml' => :xml,
+    'application/rdf+xml' => :xml,
+    'text/xml' => :xml,
+    'application/json' => :json,
+    'text/json' => :json, }
 
   module ClassMethods    
     #
@@ -64,7 +74,7 @@ module HTTParty
     end
     
     def format(f)
-      raise UnsupportedFormat, "Must be one of: #{AllowedFormats.keys.join(', ')}" unless AllowedFormats.key?(f)
+      raise UnsupportedFormat, "Must be one of: #{AllowedFormats.join(', ')}" unless AllowedFormats.include?(f)
       @format = f
     end
     
@@ -126,7 +136,7 @@ module HTTParty
         request.basic_auth(basic_auth[:username], basic_auth[:password]) if basic_auth
         response       = http(uri).request(request)
 
-        @format      ||= format_from_mimetype(response['content-type'])
+        @format      ||= format_from_mimetype(response['content-type'].split(';',2)[0])
 
         case response
         when Net::HTTPSuccess
@@ -157,9 +167,9 @@ module HTTParty
       end
       
       # Uses the HTTP Content-Type header to determine the format of the response
-      # It compares the MIME type returned to the types stored in the AllowedFormats hash
+      # It compares the MIME type returned to the types stored in the MimeType hashto choose format (ie AloowedFormat)
       def format_from_mimetype(mimetype) #:nodoc:
-        AllowedFormats.each { |k, v| return k if mimetype.include?(v) }
+        MimeTypes[mimetype]
       end
   end
 end
